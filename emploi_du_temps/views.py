@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
@@ -435,11 +437,15 @@ def publier_emploi_du_temps(request: HttpRequest, pk: int) -> HttpResponse:
 
 @cd_requis
 def editeur_emploi_du_temps(request: HttpRequest, pk: int) -> HttpResponse:
-    """Afficher l'éditeur type Kanban/table officielle."""
+    """Afficher l'éditeur sous la forme d'un emploi du temps officiel."""
     emploi_du_temps = get_object_or_404(
         EmploiDuTemps.objects.select_related("option", "creePar"),
         pk=pk,
     )
+    creneaux = list(emploi_du_temps.creneaux.select_related("salle"))
+    sites = sorted({creneau.salle.site for creneau in creneaux if creneau.salle.site})
+    salles = sorted({creneau.salle.nom for creneau in creneaux if creneau.salle.nom})
+
     return render(
         request,
         "emploi_du_temps/emplois_du_temps/editeur.html",
@@ -448,6 +454,9 @@ def editeur_emploi_du_temps(request: HttpRequest, pk: int) -> HttpResponse:
             "jours": JOURS_EDT,
             "lignes": construire_grille(emploi_du_temps),
             "plages": PLAGES_HORAIRES,
+            "date_fin_semaine": emploi_du_temps.semaine + timedelta(days=5),
+            "site_officiel": sites[0] if len(sites) == 1 else "à préciser",
+            "salle_officielle": salles[0] if len(salles) == 1 else "selon créneau",
         },
     )
 
